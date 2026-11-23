@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="530" viewBox="0 0 460 530" role="img" aria-labelledby="title desc">
+  <title id="title">Proposed backend for a reviewed split</title>
+  <desc id="desc">A Python API snapshots the bill and order. A Temporal worker evaluates the phrases and balances. Postgres stores a versioned proposal. The reviewer submits an acceptance request. The bill service rechecks the locked records and writes the allocations and audit entry in one transaction.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1l6 3-6 3" fill="none" stroke="#506052" stroke-width="1.5"/></marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #26332e }
+      .label { font-family: monospace; font-size: 13px; letter-spacing: 1px }
+      .node { fill: white; stroke: #aab5a9 }
+      .name { font-size: 19px; font-weight: 600 }
+      .note { font-size: 16px; fill: #4d5951 }
+      .wire { stroke: #506052; stroke-width: 1.5; marker-end: url(#arrow) }
+    </style>
+  </defs>
+  <rect x="1" y="1" width="458" height="528" rx="7" fill="#f7f7f2" stroke="#d7d8cf"/>
+  <text x="22" y="30" class="label">GENERATE A PROPOSAL</text>
+  <rect class="node" x="22" y="44" width="416" height="54" rx="3"/>
+  <text class="name" x="38" y="67">Python API</text><text class="note" x="38" y="88">Capture the bill and order revisions</text>
+  <path class="wire" d="M230 98v16"/>
+  <rect class="node" x="22" y="117" width="416" height="56" rx="3"/>
+  <text class="name" x="38" y="141">Temporal worker</text><text class="note" x="38" y="162">Match service phrases and check open balances</text>
+  <path class="wire" d="M230 173v16"/>
+  <rect class="node" x="22" y="192" width="416" height="56" rx="3"/>
+  <text class="name" x="38" y="216">Postgres</text><text class="note" x="38" y="237">Store the proposal revision and evidence</text>
+  <path class="wire" d="M230 248v45"/>
+  <text x="22" y="280" class="label">ACCEPT A SPLIT</text>
+  <rect class="node" x="22" y="296" width="416" height="56" rx="3"/>
+  <text class="name" x="38" y="320">Reviewer</text><text class="note" x="38" y="341">Submit the revision and an idempotency key</text>
+  <path class="wire" d="M230 352v16"/>
+  <rect class="node" x="22" y="371" width="416" height="56" rx="3"/>
+  <text class="name" x="38" y="395">Bill service</text><text class="note" x="38" y="416">Lock records and recheck current balances</text>
+  <path class="wire" d="M230 427v16"/>
+  <rect x="22" y="446" width="416" height="62" rx="3" fill="#f5f8d6" stroke="#b6bf58"/>
+  <text class="name" x="38" y="472">Postgres transaction</text><text class="note" x="38" y="494">Commit allocations, balances and audit entry</text>
+</svg>

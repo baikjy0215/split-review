@@ -58,6 +58,15 @@ main:focus { outline: none; }
 .page-nav a { padding: .65rem 0; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; }
 .page-nav a:hover, .page-nav a[aria-current=page] { color: var(--ink); border-color: var(--ink); }
 .page-nav a[aria-current=page] { font-weight: 600; }
+.page-nav { margin-left: auto; }
+.repo-link {
+  border-left: 1px solid var(--line);
+  padding: .25rem 0 .25rem 1rem;
+  font-weight: 550;
+  color: var(--ink);
+  text-decoration: none;
+}
+.repo-link:hover { text-decoration: underline; text-underline-offset: .2em; }
 .mast { align-items: end; padding: 2.45rem 0 1.5rem; }
 .caption, .folio, .cases button span, .demo-label, footer {
   font: 500 .78rem/1.45 ui-monospace, Consolas, monospace;
@@ -151,8 +160,9 @@ footer { padding: 1rem 0; margin: 1.35rem 0; border-top: 1px solid var(--line); 
   .line-summary { align-items: start; }
 }
 @media (max-width: 530px) {
-  .bar { align-items: start; flex-direction: column; gap: .25rem; padding: .65rem 0 0; }
-  .page-nav { width: 100%; justify-content: space-between; gap: .4rem; }
+  .bar { display: grid; grid-template-columns: 1fr auto; gap: .25rem; padding: .65rem 0 0; }
+  .page-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; justify-content: space-between; gap: .4rem; }
+  .repo-link { grid-row: 1; grid-column: 2; border: 0; }
 }
 @media (max-width: 380px) {
   .frame { width: calc(100% - 1.4rem); }

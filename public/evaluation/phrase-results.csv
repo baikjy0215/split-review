@@ -1,0 +1,39 @@
+phrase,expected,held_before_scoring,potion_2m,potion_4m,blink_8m,bekko_17m_gated
+workspace setup,setup,false,unclear,unclear,unclear,setup
+configure the account,setup,false,unclear,unclear,unclear,setup
+tenant provisioning,setup,false,unclear,unclear,unclear,unclear
+account activation,setup,false,unclear,unclear,unclear,unclear
+initial account configuration,setup,false,setup,setup,setup,unclear
+set up workspace,setup,false,unclear,unclear,unclear,unclear
+workspace installation,setup,false,unclear,unclear,unclear,unclear
+provision new account,setup,false,unclear,unclear,unclear,unclear
+data import,migration,false,migration,migration,migration,unclear
+migrate customer records,migration,false,unclear,unclear,unclear,unclear
+transfer existing records,migration,false,unclear,unclear,unclear,unclear
+historical data migration,migration,false,migration,migration,migration,migration
+import legacy data,migration,false,unclear,unclear,unclear,unclear
+database migration,migration,false,migration,migration,unclear,migration
+transfer source data,migration,false,unclear,unclear,unclear,unclear
+customer record conversion,migration,false,unclear,unclear,unclear,unclear
+priority assistance,support,false,support,support,unclear,unclear
+customer support,support,false,unclear,unclear,unclear,support
+helpdesk support,support,false,unclear,unclear,unclear,support
+premium technical assistance,support,false,unclear,unclear,unclear,unclear
+service support retainer,support,false,support,support,support,unclear
+technical help,support,false,support,support,unclear,unclear
+monthly hosting,unclear,false,unclear,unclear,unclear,unclear
+data backup,unclear,false,unclear,unclear,unclear,unclear
+export archived data,unclear,false,unclear,unclear,unclear,unclear
+account deletion,unclear,false,unclear,unclear,unclear,unclear
+migration software license,unclear,false,unclear,unclear,unclear,unclear
+installation hardware,unclear,false,unclear,unclear,unclear,unclear
+software subscription,unclear,false,unclear,unclear,unclear,unclear
+database storage,unclear,false,unclear,unclear,unclear,unclear
+setup travel expenses,unclear,false,unclear,unclear,unclear,unclear
+account maintenance,unclear,false,unclear,unclear,unclear,unclear
+customer data analysis,unclear,false,unclear,unclear,unclear,unclear
+support for data migration,unclear,true,unclear,unclear,unclear,unclear
+estimated data migration,unclear,true,unclear,unclear,unclear,unclear
+data import tax,unclear,true,unclear,unclear,unclear,unclear
+refund for setup,unclear,true,unclear,unclear,unclear,unclear
+data migration or support,unclear,true,unclear,unclear,unclear,unclear
