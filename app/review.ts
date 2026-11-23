@@ -39,3 +39,14 @@ export function accept(invoice: Invoice, draft: Draft, classify: Classifier): Dr
   if (draft.accepted || !compare(invoice, draft, classify).eligible) return draft;
   return { ...draft, accepted: true };
 }
+export function restore(invoice: Invoice, data: unknown, classify: Classifier): Draft {
+  if (!data || typeof data !== 'object') return initialDraft(invoice);
+  const d = data as Partial<Draft>;
+  if (!Array.isArray(d.phrases) || d.phrases.length !== 2 ||
+      !d.phrases.every(s => typeof s === 'string' && s.trim().length > 0 && s.length <= 70) ||
+      typeof d.cents !== 'number' || !Number.isSafeInteger(d.cents) || d.cents <= 0 || d.cents > 99999999) {
+    return initialDraft(invoice);
+  }
+  const draft = { phrases: d.phrases, cents: d.cents, accepted: false };
+  return d.accepted === true ? accept(invoice, draft, classify) : draft;
+}
