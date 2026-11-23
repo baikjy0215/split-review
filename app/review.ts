@@ -5,6 +5,13 @@ export interface Draft { phrases: [string, string]; cents: number; accepted: boo
 export function initialDraft(invoice: Invoice): Draft {
   return { phrases: [...invoice.phrases], cents: 200000, accepted: false };
 }
+export function parseCents(value: string): number | null {
+  const amount = value.trim();
+  if (!/^\$?(?:\d{1,6}|\d{1,3},\d{3})(?:\.\d{1,2})?$/.test(amount)) return null;
+  const [whole, fraction = ''] = amount.replace(/[$,]/g, '').split('.');
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return cents > 0 ? cents : null;
+}
 export function compare(invoice: Invoice, draft: Draft, classify: Classifier) {
   const judgments = draft.phrases.map(classify);
   const rows = order.lines.map((line, index) => {
@@ -22,8 +29,10 @@ export function compare(invoice: Invoice, draft: Draft, classify: Classifier) {
   });
   if (!issues.length && rows.some(row => !row.evidence)) issues.push('Both phrases point to the same service. Confirm what was billed for the other order line.');
   const availableCents = rows.reduce((total, row) => total + row.available, 0);
+  const previouslyBilled = rows.filter(row => row.cents > row.available);
+  const shortfallCents = Math.max(0, draft.cents - availableCents);
   if (draft.cents < availableCents) issues.push('This invoice covers only part of the open balance. Confirm how much was billed for each service.');
-  return { rows, judgments, issues: [...new Set(issues)], availableCents,
+  return { rows, judgments, issues: [...new Set(issues)], availableCents, previouslyBilled, shortfallCents,
     eligible: issues.length === 0 && draft.cents === availableCents };
 }
 export function accept(invoice: Invoice, draft: Draft, classify: Classifier): Draft {

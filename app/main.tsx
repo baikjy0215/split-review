@@ -1,27 +1,69 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { cases, order, type Invoice } from '../fixtures/invoices';
 import { loadClassifier, matchThreshold, type Classifier } from './model';
-import { accept, compare, initialDraft, type Draft } from './review';
+import { accept, compare, initialDraft, parseCents, type Draft } from './review';
 import './style.css';
 
 const usd = (cents: number) => (cents/100).toLocaleString('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0,
 });
+function Editor({ draft, onSave, onClose }: {draft: Draft; onSave: (draft: Draft) => void; onClose: () => void}) {
+  const [error, setError] = useState('');
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const first = String(data.get('first')).trim();
+    const second = String(data.get('second')).trim();
+    const cents = parseCents(String(data.get('amount')));
+    if (!first || !second) {
+      setError('Enter a description for each billed service.');
+      return;
+    }
+    if (cents === null) {
+      setError('Enter a USD amount from $0.01 to $999,999.99 with up to two decimal places.');
+      return;
+    }
+    onSave({ phrases: [first, second], cents, accepted: false });
+  }
+  return <form className="editor" onSubmit={submit}>
+    <label>First billed service<input autoFocus name="first" required maxLength={70} defaultValue={draft.phrases[0]} /></label>
+    <label>Second billed service<input name="second" required maxLength={70} defaultValue={draft.phrases[1]} /></label>
+    <label>Invoice total (USD)<input name="amount" required inputMode="decimal" defaultValue={(draft.cents/100).toFixed(2)} /></label>
+    {error && <p role="alert">{error}</p>}
+    <div className="buttons"><button className="primary">Compare changes</button><button type="button" onClick={onClose}>Cancel</button></div>
+  </form>;
+}
+
 function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
   const [draft, setDraft] = useState<Draft>(() => initialDraft(invoice));
+  const [editing, setEditing] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const nextFocus = useRef<'decision' | 'edit' | null>(null);
+  useLayoutEffect(() => {
+    if (nextFocus.current === 'decision') headingRef.current?.focus();
+    if (nextFocus.current === 'edit') editButton.current?.focus();
+    nextFocus.current = null;
+  }, [draft, editing]);
   const result = compare(invoice, draft, classify);
   const status = draft.accepted ? 'accepted' : result.eligible ? 'ready' : 'hold';
   function save(next: Draft) {
+    nextFocus.current = 'decision';
     setDraft(next);
+    setEditing(false);
   }
-  const heading = {ready:'Suggested split',hold:'Hold for review',accepted:'Split recorded'}[status];
+  const hasShortfall = result.shortfallCents > 0;
+  const heading = hasShortfall ? usd(result.shortfallCents) + ' shortfall' :
+    {ready:'Suggested split',hold:'Hold for review',accepted:'Split recorded'}[status];
   return <div className="desk">
     <div className="sources">
       <section className="document invoice">
         <div className="folio"><span>Vendor invoice</span><span>{invoice.id}</span></div>
         <div className="doc-body"><div className="vendor"><span className="monogram" aria-hidden="true">A</span><div><h2>{order.vendor}</h2><span className="muted">Implementation services</span></div></div>
           <div className="line-summary"><div><div className="caption">Billed description</div><p className="quote">“{draft.phrases.join(' and ')}”</p></div><div className="amount">{usd(draft.cents)}</div></div>
+          {editing ? <Editor draft={draft} onSave={save} onClose={() => { nextFocus.current = 'edit'; setEditing(false); }} /> :
+            !draft.accepted && <button ref={editButton} className="text-button" onClick={() => setEditing(true)}>Edit invoice</button>}
         </div>
       </section>
       <section className="document purchase"><div className="folio"><span>Purchase order</span><span>{order.id}</span></div>
@@ -30,14 +72,15 @@ function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
         </tbody></table></div>
       </section>
     </div>
-    <section className={'assessment ' + status} aria-label="Review decision"><div className="folio"><span>Allocation review</span><strong>{{hold:'On hold',ready:'Ready to accept',accepted:'Accepted'}[status]}</strong></div>
-      <div className="assessment-body"><div aria-live="polite"><h2>{heading}</h2>
+    <section className={'assessment ' + status} aria-label="Review decision"><div className="folio"><span>Allocation review</span><strong>{editing ? 'Editing invoice' : {hold:'On hold',ready:'Ready to accept',accepted:'Accepted'}[status]}</strong></div>
+      <div className="assessment-body"><div aria-live="polite"><h2 ref={headingRef} tabIndex={-1}>{heading}</h2>
+        {result.previouslyBilled.map(row => <p className="reason" key={row.id}>An earlier invoice used <strong>{usd(row.cents - row.available)}</strong> of the {usd(row.cents)} ordered for {row.name.toLowerCase()}, leaving <strong>{usd(row.available)}</strong> for this invoice.</p>)}
         {result.issues.length > 0 && <ul className="issues">{result.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
         {status !== 'hold' && <p className="reason">{draft.accepted ? 'Two bill lines have been applied to the order in this demo session.' : 'Both ordered services have supporting wording and enough open balance.'}</p>}
       </div>
       <div className="allocations">{result.rows.map(row => <div className="allocation" key={row.id}><div><strong>{row.name}</strong><div className={'evidence' + (!row.evidence ? ' missing' : '')}>{row.evidence ? '“' + row.evidence + '”' : 'No distinct supporting phrase'}</div></div><b>{usd(row.available)}{status === 'hold' && ' available'}</b></div>)}</div>
       <div className="delta"><span>Invoice <b>{usd(draft.cents)}</b></span><span>{draft.accepted ? 'Applied to order' : 'Available to bill'} <b>{usd(result.availableCents)}</b></span></div>
-      <div className="buttons"><button className="primary" disabled={!result.eligible || draft.accepted} onClick={() => save(accept(invoice,draft,classify))}>{draft.accepted ? 'Split recorded' : 'Accept split'}</button><button onClick={() => save(initialDraft(invoice))}>Reset case</button></div>
+      <div className="buttons"><button className="primary" disabled={!result.eligible || draft.accepted || editing} onClick={() => save(accept(invoice,draft,classify))}>{draft.accepted ? 'Split recorded' : 'Accept split'}</button><button onClick={() => save(initialDraft(invoice))}>Reset case</button></div>
       </div>
       <details className="trace"><summary>Inspect matching evidence</summary><p>Each phrase is compared with local service examples. Cosine similarity measures closeness. The margin is its lead over the next category.</p>
       <dl>{result.judgments.map((j,i) => <div key={i}><dt>{draft.phrases[i]}</dt><dd>{'similarity' in j ? j.label + ' · similarity ' + j.similarity.toFixed(3) + ' · margin ' + j.margin.toFixed(3) : 'Held before scoring.'}{j.reason && <p>{j.reason}</p>}</dd></div>)}</dl>
