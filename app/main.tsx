@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { cases, order, type Invoice } from '../fixtures/invoices';
-import { loadClassifier, type Classifier } from './model';
+import { loadClassifier, matchThreshold, type Classifier } from './model';
 import { accept, compare, initialDraft, type Draft } from './review';
 import './style.css';
 
@@ -39,16 +39,37 @@ function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
       <div className="delta"><span>Invoice <b>{usd(draft.cents)}</b></span><span>{draft.accepted ? 'Applied to order' : 'Available to bill'} <b>{usd(result.availableCents)}</b></span></div>
       <div className="buttons"><button className="primary" disabled={!result.eligible || draft.accepted} onClick={() => save(accept(invoice,draft,classify))}>{draft.accepted ? 'Split recorded' : 'Accept split'}</button><button onClick={() => save(initialDraft(invoice))}>Reset case</button></div>
       </div>
+      <details className="trace"><summary>Inspect matching evidence</summary><p>Each phrase is compared with local service examples. Cosine similarity measures closeness. The margin is its lead over the next category.</p>
+      <dl>{result.judgments.map((j,i) => <div key={i}><dt>{draft.phrases[i]}</dt><dd>{'similarity' in j ? j.label + ' · similarity ' + j.similarity.toFixed(3) + ' · margin ' + j.margin.toFixed(3) : 'Held before scoring.'}{j.reason && <p>{j.reason}</p>}</dd></div>)}</dl>
+      <p>A match requires similarity of at least {matchThreshold.similarity} and a margin of at least {matchThreshold.margin}.</p></details>
     </section>
   </div>;
 }
 
+function caseIndex() {
+    const invoiceId = new URLSearchParams(location.search).get('invoice');
+    return Math.max(0, cases.findIndex(invoice => invoice.id === invoiceId));
+}
+
 function Workspace() {
+  const [index,setIndex] = useState(caseIndex);
+  useEffect(() => {
+    const restoreCase = () => setIndex(caseIndex());
+    window.addEventListener('popstate', restoreCase);
+    return () => window.removeEventListener('popstate', restoreCase);
+  }, []);
+  function selectCase(i: number) {
+    const url = new URL(location.href);
+    url.searchParams.set('invoice', cases[i].id);
+    history.replaceState(null, '', url);
+    setIndex(i);
+  }
   const [classify,setClassify] = useState<Classifier | null>(null);
   const [failed,setFailed] = useState(false);
   useEffect(() => { loadClassifier().then(fn => setClassify(() => fn)).catch(() => setFailed(true)); }, []);
   return <><div className="mast"><div><p className="caption">Invoice workspace</p><h1>Review a bundled charge</h1><p className="sub">Compare one invoice line with the two services the buyer ordered.</p></div><span className="demo-label">Synthetic records · USD</span></div>
-    {classify ? <Review key={cases[0].id} invoice={cases[0]} classify={classify} /> : <section className="loading" role="status">{failed ? <><h2>Matching model unavailable</h2><p>Reload the local model files to continue the review.</p><button onClick={() => location.reload()}>Reload</button></> : 'Loading service matching model…'}</section>}
+    <nav className="cases" aria-label="Example invoices">{cases.map((c,i) => <button key={c.id} aria-pressed={i===index} onClick={() => selectCase(i)}><span>{c.id}</span>{c.name}</button>)}</nav>
+    {classify ? <Review key={cases[index].id} invoice={cases[index]} classify={classify} /> : <section className="loading" role="status">{failed ? <><h2>Matching model unavailable</h2><p>Reload the local model files to continue the review.</p><button onClick={() => location.reload()}>Reload</button></> : 'Loading service matching model…'}</section>}
     <footer><span>Model2Vec / potion-base-2M</span><span>Browser inference · Session-local review</span></footer>
     </>;
 }

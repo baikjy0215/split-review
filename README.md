@@ -5,6 +5,7 @@ Review one bundled invoice against two fixed-price purchase order lines. The bro
 ## Try it
 
 - **Matching services** shows how a $2,000 invoice can be split into $800 of account setup and $1,200 of data migration.
+- **Different service** holds the invoice when the vendor bills priority support. Open the evidence panel to inspect the phrase matches.
 
 ## Run locally
 
