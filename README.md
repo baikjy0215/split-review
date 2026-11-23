@@ -8,6 +8,8 @@ Review one bundled invoice against two fixed-price purchase order lines. The bro
 - **Different service** holds the invoice when the vendor bills priority support. Open the evidence panel to inspect the phrase matches.
 - **Used balance** shows a $300 shortfall after a previous bill. Compare a corrected $1,700 invoice to review the remaining $800 and $900 allocations.
 
+Compared edits and accepted splits survive reloads in the same browser tab. Reset a case to return to the original invoice.
+
 [See the $300 shortfall in the workspace](docs/assets/used-balance.png)
 
 ## Run locally

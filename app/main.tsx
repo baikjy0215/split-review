@@ -2,12 +2,22 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 're
 import { createRoot } from 'react-dom/client';
 import { cases, order, type Invoice } from '../fixtures/invoices';
 import { loadClassifier, matchThreshold, type Classifier } from './model';
-import { accept, compare, initialDraft, parseCents, type Draft } from './review';
+import { accept, compare, initialDraft, parseCents, restore, type Draft } from './review';
 import './style.css';
 
 const usd = (cents: number) => (cents/100).toLocaleString('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0,
 });
+const key = (invoice: Invoice) => 'split-review/v1/' + invoice.id;
+const memoryDrafts = new Map<string, Draft>();
+
+function readDraft(invoice: Invoice, classify: Classifier) {
+  const memoryDraft = memoryDrafts.get(invoice.id);
+  if (memoryDraft) return restore(invoice, memoryDraft, classify);
+  try { return restore(invoice, JSON.parse(sessionStorage.getItem(key(invoice)) || 'null'), classify); }
+  catch { return initialDraft(invoice); }
+}
+
 function Editor({ draft, onSave, onClose }: {draft: Draft; onSave: (draft: Draft) => void; onClose: () => void}) {
   const [error, setError] = useState('');
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -36,7 +46,7 @@ function Editor({ draft, onSave, onClose }: {draft: Draft; onSave: (draft: Draft
 }
 
 function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(invoice));
+  const [draft, setDraft] = useState<Draft>(() => readDraft(invoice, classify));
   const [editing, setEditing] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
@@ -51,6 +61,12 @@ function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
   function save(next: Draft) {
     nextFocus.current = 'decision';
     setDraft(next);
+    try {
+      sessionStorage.setItem(key(invoice), JSON.stringify(next));
+      memoryDrafts.delete(invoice.id);
+    } catch {
+      memoryDrafts.set(invoice.id, next);
+    }
     setEditing(false);
   }
   const hasShortfall = result.shortfallCents > 0;
@@ -81,6 +97,7 @@ function Review({invoice, classify}: {invoice: Invoice; classify: Classifier}) {
       <div className="allocations">{result.rows.map(row => <div className="allocation" key={row.id}><div><strong>{row.name}</strong><div className={'evidence' + (!row.evidence ? ' missing' : '')}>{row.evidence ? '“' + row.evidence + '”' : 'No distinct supporting phrase'}</div></div><b>{usd(row.available)}{status === 'hold' && ' available'}</b></div>)}</div>
       <div className="delta"><span>Invoice <b>{usd(draft.cents)}</b></span><span>{draft.accepted ? 'Applied to order' : 'Available to bill'} <b>{usd(result.availableCents)}</b></span></div>
       <div className="buttons"><button className="primary" disabled={!result.eligible || draft.accepted || editing} onClick={() => save(accept(invoice,draft,classify))}>{draft.accepted ? 'Split recorded' : 'Accept split'}</button><button onClick={() => save(initialDraft(invoice))}>Reset case</button></div>
+      {memoryDrafts.has(invoice.id) && <p role="status" className="reason">Tab storage is unavailable. This review will last until you reload the page.</p>}
       </div>
       <details className="trace"><summary>Inspect matching evidence</summary><p>Each phrase is compared with local service examples. Cosine similarity measures closeness. The margin is its lead over the next category.</p>
       <dl>{result.judgments.map((j,i) => <div key={i}><dt>{draft.phrases[i]}</dt><dd>{'similarity' in j ? j.label + ' · similarity ' + j.similarity.toFixed(3) + ' · margin ' + j.margin.toFixed(3) : 'Held before scoring.'}{j.reason && <p>{j.reason}</p>}</dd></div>)}</dl>
