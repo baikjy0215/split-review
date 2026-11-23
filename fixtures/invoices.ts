@@ -8,5 +8,6 @@ export const order = {
 
 export const cases = [
   { id: 'INV-2084', name: 'Matching services', phrases: ['Setup', 'Data import'], balances: [80000, 120000] },
+  { id: 'INV-2085', name: 'Different service', phrases: ['Setup', 'Priority support'], balances: [80000, 120000] },
 ] as const;
 export type Invoice = typeof cases[number];

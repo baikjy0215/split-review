@@ -10,6 +10,13 @@ const examples: Record<Service, string[]> = {
   migration: ['data migration', 'import source data', 'database transfer', 'record migration', 'import existing records', 'data conversion'],
   support: ['priority support', 'technical support', 'premium support', 'help desk', 'customer assistance', 'support retainer'],
 };
+// A close embedding can still describe a different object, such as a setup guide.
+// Limit positive evidence for these two fixed-price lines to reviewed wording.
+const qualifiers = {
+  setup: 'account accounts tenant new initial configured configure provision provisioned set up',
+  migration: 'customer historical legacy migrated migrate imported transferred converted records',
+};
+const commonWords = 'a an the of for to from service services fee fees completed'.split(' ');
 function abstain(reason: string): Judgment {
   return { label: 'unclear', reason };
 }
@@ -56,6 +63,9 @@ export function createClassifier(tokens: string[], weights: ArrayBuffer, scaleBu
   }
   const catalog = (Object.keys(examples) as Service[]).map(label => ({
     label, vectors: examples[label].map(encode).filter(v => v !== null),
+    scopeWords: label === 'support' ? null : new Set([
+      ...examples[label].join(' ').split(' '), ...qualifiers[label].split(' '), ...commonWords,
+    ]),
   }));
   return text => {
     const phrase = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/[-\s]+/g, ' ');
@@ -77,7 +87,13 @@ export function createClassifier(tokens: string[], weights: ArrayBuffer, scaleBu
     if (!(similarity >= matchThreshold.similarity && margin >= matchThreshold.margin)) {
       return { label: 'unclear', similarity, margin };
     }
-    return { label: ranked[0].group.label, similarity, margin };
+    const { label, scopeWords } = ranked[0].group;
+    const unverified = scopeWords && phrase.split(' ').find(word => !scopeWords.has(word));
+    if (unverified) {
+      return { label: 'unclear', similarity, margin,
+        reason: 'Confirm what “' + unverified + '” refers to before applying this charge to the order.' };
+    }
+    return { label, similarity, margin };
   };
 }
 
