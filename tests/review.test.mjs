@@ -79,6 +79,16 @@ test('high similarity alone cannot authorize a different deliverable or setup ta
   const supported = {...initialDraft(used), phrases:['account setup fee','customer data migration'], cents:170000};
   assert.equal(accept(used,supported,classify).accepted,true);
 });
+test('the published phrase results agree with the bundled classifier', async () => {
+  const file = new URL('../public/evaluation/phrase-results.csv', import.meta.url);
+  const [, ...rows] = (await readFile(file,'utf8')).trim().split(/\r?\n/);
+  for (const row of rows) {
+    const [phrase,, heldBeforeScoring, prediction] = row.split(',');
+    const judgment = classify(phrase);
+    assert.equal(judgment.label,prediction,phrase);
+    assert.equal(String(!('similarity' in judgment)),heldBeforeScoring,phrase);
+  }
+});
 test('restores accepted state only after rechecking the underlying evidence', () => {
   assert.equal(restore(match,{...initialDraft(match),accepted:true},classify).accepted,true);
   assert.equal(restore(scope,{...initialDraft(scope),accepted:true},classify).accepted,false);

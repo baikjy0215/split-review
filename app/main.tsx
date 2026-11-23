@@ -1,9 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { cases, order, type Invoice } from '../fixtures/invoices';
 import { loadClassifier, matchThreshold, type Classifier } from './model';
 import { accept, compare, initialDraft, parseCents, restore, type Draft } from './review';
 import './style.css';
+
+const Documents = lazy(() => import('./Documents'));
+const pages = { workspace: 'Workspace', brief: 'Product brief', architecture: 'Architecture' } as const;
+function currentPage(): keyof typeof pages {
+  const hash = location.hash.slice(1);
+  return hash === 'brief' || hash === 'architecture' ? hash : 'workspace';
+}
 
 const usd = (cents: number) => (cents/100).toLocaleString('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0,
@@ -135,12 +142,35 @@ function Workspace() {
 }
 
 function App() {
+  const [page, setPage] = useState(currentPage);
+  const [visitedWorkspace, setVisitedWorkspace] = useState(page === 'workspace');
+  const main = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const navigate = () => {
+      const next = currentPage();
+      if (next === 'workspace') setVisitedWorkspace(true);
+      setPage(next);
+      main.current?.focus({ preventScroll: true });
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
+  useEffect(() => { document.title = pages[page] + ' | Split Review'; }, [page]);
+
   return <>
     <header className="brandbar"><div className="frame bar">
       <div className="brand"><img src="./split-review.svg" width="30" height="30" alt="" />Split Review</div>
+      <nav className="page-nav" aria-label="Main navigation">
+        {Object.entries(pages).map(([id, label]) =>
+          <a key={id} href={'#' + id} aria-current={id === page ? 'page' : undefined}>{label}</a>)}
+      </nav>
+      <a className="repo-link" href="https://github.com/baikjy0215/split-review" aria-label="View Split Review on GitHub">GitHub</a>
     </div></header>
-    <main className="frame"><Workspace /></main>
+    <main className="frame" ref={main} tabIndex={-1}>
+      {visitedWorkspace && <div hidden={page !== 'workspace'}><Workspace /></div>}
+      {page !== 'workspace' && <Suspense fallback={<p role="status">Loading document…</p>}><Documents page={page}/></Suspense>}
+    </main>
   </>;
 }
-
 createRoot(document.getElementById('root')!).render(<App />);
